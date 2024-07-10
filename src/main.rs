@@ -18,24 +18,27 @@ fn main() {
 /// For example, "CYBXA" is the shortest substring of "ZCYBXAW" that
 /// contains the characters of "ABC".
 fn span<T: Eq + Hash, U: IntoIterator<Item = T>>(pat: U, goal: HashSet<T>) -> (usize, usize) {
+    let goal_len = goal.len();
     let mut pos = 0;
     let mut len = 0;
     let mut map = LinkedHashMap::<T, usize>::new();
-    pat.into_iter()
-        .enumerate()
-        .filter(|p| goal.contains(&p.1))
-        .for_each(|p| {
-            // append next T->index to linked map
-            map.insert(p.1, p.0);
-            // if we have a shorter span, record it
-            let head = *map.front().unwrap().1;
-            let tail = *map.back().unwrap().1;
-            let newlen = tail - head + 1;
-            if map.len() == goal.len() && (len == 0 || newlen < len) {
-                pos = head;
-                len = newlen;
+    let pairs = pat.into_iter().enumerate().filter(|p| goal.contains(&p.1));
+    for p in pairs {
+        // append next T->index to linked map
+        map.insert(p.1, p.0);
+        // if we have a shorter span, record it
+        let head = *map.front().unwrap().1;
+        let tail = *map.back().unwrap().1;
+        let newlen = tail - head + 1;
+        if map.len() == goal_len && (len == 0 || newlen < len) {
+            pos = head;
+            len = newlen;
+            // return early if optimal solution found
+            if len == goal_len {
+                return (pos, len);
             }
-        });
+        }
+    }
     (pos, len)
 }
 
@@ -60,6 +63,11 @@ fn span_test() {
         (1, 5),
         span("ZCYBXAW".chars(), HashSet::from_iter("ABC".chars())),
         "CYBXAW"
+    );
+    assert_eq!(
+        (2, 3),
+        span("CAABC".chars(), HashSet::from_iter("ABC".chars())),
+        "ABC"
     );
     assert_eq!(
         (0, 6),
