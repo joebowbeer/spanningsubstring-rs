@@ -1,0 +1,69 @@
+use hashlink::LinkedHashMap;
+use std::collections::HashSet;
+use std::env::args;
+use std::hash::Hash;
+
+fn main() {
+    let goal = args().nth(1).expect("required: goal");
+    let pat = args().nth(2).expect("required: pat");
+    let (pos, len) = span(pat.chars(), HashSet::from_iter(goal.chars()));
+    println!("goal = {goal}");
+    println!("pattern = {pat}");
+    println!("Shortest span = [{}]", &pat[pos..(pos + len)]);
+}
+
+/// Given a sequence of elements and a set of elements, finds the shortest
+/// subsequence containing all the elements in the set.
+/// <p>
+/// For example, "CYBXA" is the shortest substring of "ZCYBXAW" that
+/// contains the characters of "ABC".
+fn span<T: Eq + Hash, U: IntoIterator<Item = T>>(pat: U, goal: HashSet<T>) -> (usize, usize) {
+    let mut pos = 0;
+    let mut len = 0;
+    let mut map = LinkedHashMap::<T, usize>::new();
+    pat.into_iter()
+        .enumerate()
+        .filter(|p| goal.contains(&p.1))
+        .for_each(|p| {
+            // append next T->index to linked map
+            map.insert(p.1, p.0);
+            // if we have a shorter span, record it
+            let head = *map.front().unwrap().1;
+            let tail = *map.back().unwrap().1;
+            let newlen = tail - head + 1;
+            if map.len() == goal.len() && (len == 0 || newlen < len) {
+                pos = head;
+                len = newlen;
+            }
+        });
+    (pos, len)
+}
+
+#[test]
+fn span_test() {
+    assert_eq!(
+        (0, 0),
+        span("".chars(), HashSet::from_iter("A".chars())),
+        "empty pat"
+    );
+    assert_eq!(
+        (0, 0),
+        span("A".chars(), HashSet::from_iter("".chars())),
+        "empty goal"
+    );
+    assert_eq!(
+        (0, 5),
+        span("ABCDEFG".chars(), HashSet::from_iter("BEAD".chars())),
+        "ABCDE"
+    );
+    assert_eq!(
+        (1, 5),
+        span("ZCYBXAW".chars(), HashSet::from_iter("ABC".chars())),
+        "CYBXAW"
+    );
+    assert_eq!(
+        (0, 6),
+        span([1, 2, 3, 4, 5, 6], HashSet::from([6, 1])),
+        "numeric"
+    );
+}
